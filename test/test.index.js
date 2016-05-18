@@ -7,79 +7,177 @@
 
 'use strict';
 
-var collection = require('../src/index.js');
+var access = require('../src/index.js');
 
 describe('index.js', function () {
-    it('.each', function () {
-        var obj1 = {a: 1, b: 2};
-        collection.each(obj1, function (key, val) {
-            expect(obj1[key]).toBe(val);
-        });
+    it('.getSet@setLength=0', function () {
+        var arr = [1, 2, 3, 4];
+        var ret1 = access.getSet({
+            get: function (index) {
+                return arr[index];
+            },
+            setLength: 0
+        }, [0]);
+        var ret2 = access.getSet({
+            get: function (index) {
+                return arr[index];
+            },
+            setLength: 0
+        }, [[0, 3]]);
 
-        var arr1 = ['a', 'b'];
-        collection.each(arr1, function (index, val) {
-            expect(arr1[index]).toBe(val);
+        expect(ret1).toEqual(1);
+        expect(ret2).toEqual({
+            0: 1,
+            3: 4
         });
-
-        var boo1 = true;
-        var times = 0;
-        collection.each(boo1, function () {
-            times++;
-        });
-        expect(times).toEqual(0);
     });
 
-    it('.map', function () {
-        var obj1 = {a: 1, b: 2};
-        var obj2 = collection.map(obj1, function (val) {
-            return val * val * val;
-        });
-        expect(obj1).not.toBe(obj2);
-        expect(obj1).toEqual({a: 1, b: 2});
-        expect(obj2).toEqual({a: 1, b: 8});
+    it('.getSet@setLength=1', function () {
+        var ret = 1;
 
-        var arr1 = ['a', 'b'];
-        var arr2 = collection.map(arr1, function (val) {
-            return val + val + val;
-        });
-        expect(arr1).not.toBe(arr2);
-        expect(arr1).toEqual(['a', 'b']);
-        expect(arr2).toEqual(['aaa', 'bbb']);
+        access.getSet({
+            set: function (val) {
+                ret += val;
+            },
+            setLength: 1,
+            eachSet: true
+        }, [[1,2]]);
 
-        var boo1 = true;
-        var times = 0;
-        var boo2 = collection.map(boo1, function () {
-            times++;
-            return '';
-        });
-        expect(times).toEqual(0);
-        expect(boo1).toBe(boo2);
+        expect(ret).toEqual(4);
+
+        access.getSet({
+            set: function (val) {
+                ret = val
+            },
+            setLength: 1,
+            eachSet: false
+        }, [[1,2]]);
+        expect(ret).toEqual([1,2]);
+
+        access.getSet({
+            set: function (val) {
+                ret = val
+            },
+            setLength: 1,
+            eachSet: true
+        }, [3]);
+        expect(ret).toEqual(3);
+
+        var ret1 =  access.getSet({
+            get: function () {
+                return ret;
+            },
+            setLength: 1,
+            eachSet: true
+        }, []);
+        expect(ret1).toEqual(3);
     });
 
-    it('.filter', function () {
-        var obj1 = {a: 1, b: 2};
-        var obj2 = collection.filter(obj1, function (val) {
-            return val > 1;
-        });
-        expect(obj1).not.toBe(obj2);
-        expect(obj1).toEqual({a: 1, b: 2});
-        expect(obj2).toEqual({b: 2});
+    it('.getSet@setLength=2', function () {
+        var setLength = 2;
+        var map = {a: 1, b: 2, c: 3};
+        var getA = access.getSet({
+            get: function (key) {
+                return map[key];
+            },
+            set: function (key, val) {
+                map[key] = val;
+            },
+            setLength: setLength
+        }, ['a']);
+        var getAB = access.getSet({
+            get: function (key) {
+                return map[key];
+            },
+            set: function (key, val) {
+                map[key] = val;
+            },
+            setLength: setLength
+        }, [['a', 'b']]);
 
-        var arr1 = ['a', 'b'];
-        var arr2 = collection.filter(arr1, function (val) {
-            return val.charCodeAt(0) > 97;
+        expect(getA).toEqual(1);
+        expect(getAB).toEqual({
+            a: 1,
+            b: 2
         });
-        expect(arr1).not.toBe(arr2);
-        expect(arr1).toEqual(['a', 'b']);
-        expect(arr2).toEqual(['b']);
 
-        var boo1 = true;
-        var times = 0;
-        var boo2 = collection.filter(boo1, function () {
-            times++;
-            return '';
+        // {a: 11}
+        access.getSet({
+            get: function (key) {
+                return map[key];
+            },
+            set: function (key, val) {
+                map[key] = val;
+            },
+            setLength: setLength
+        }, ['a', 11]);
+        getA = access.getSet({
+            get: function (key) {
+                return map[key];
+            },
+            set: function (key, val) {
+                map[key] = val;
+            },
+            setLength: setLength
+        }, ['a']);
+        getAB = access.getSet({
+            get: function (key) {
+                return map[key];
+            },
+            set: function (key, val) {
+                map[key] = val;
+            },
+            setLength: setLength
+        }, [['a', 'b']]);
+
+        expect(getA).toEqual(11);
+        expect(getAB).toEqual({
+            a: 11,
+            b: 2
         });
-        expect(times).toEqual(0);
-        expect(boo1).toBe(boo2);
+
+        // {b: 22, c: 33}
+        access.getSet({
+            get: function (key) {
+                return map[key];
+            },
+            set: function (key, val) {
+                map[key] = val;
+            },
+            setLength: setLength
+        }, [{b: 22, c: 33}]);
+        getA = access.getSet({
+            get: function (key) {
+                return map[key];
+            },
+            set: function (key, val) {
+                map[key] = val;
+            },
+            setLength: setLength
+        }, ['a']);
+        getAB = access.getSet({
+            get: function (key) {
+                return map[key];
+            },
+            set: function (key, val) {
+                map[key] = val;
+            },
+            setLength: setLength
+        }, [['a', 'b']]);
+        var getC = access.getSet({
+            get: function (key) {
+                return map[key];
+            },
+            set: function (key, val) {
+                map[key] = val;
+            },
+            setLength: setLength
+        }, ['c']);
+        expect(getA).toEqual(11);
+        expect(getAB).toEqual({
+            a: 11,
+            b: 22
+        });
+        expect(getC).toEqual(33);
     });
 });

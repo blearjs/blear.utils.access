@@ -34,6 +34,7 @@
   "dependencies": {},
   "peerDependencies": {
     "blear.utils.typeis": "1.x",
+    "blear.utils.collection": "1.x",
     "blear.utils.object": "1.x",
     "blear.utils.array": "1.x"
   },

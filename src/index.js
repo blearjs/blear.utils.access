@@ -1,175 +1,182 @@
 'use strict';
 
+var typeis = require('blear.utils.typeis');
+var collection = require('blear.utils.collection');
+var object = require('blear.utils.object');
 var array = require('blear.utils.array');
-var string = require('blear.utils.string');
-
-var browserJSPrefixList = ['', 'webkit', 'moz', 'ms', 'MS'];
-var browserCSSPrefixList = ['', '-webkit', '-moz', '-ms'];
-// @link http://www.w3school.com.cn/cssref/index.asp
-var reCSS3 = /(border|animation|backgroud-size|transition|transform|display|filter|overflow)/;
-var reCSSPrefix = /^-(webkit|moz|ms)-/i;
-// translateX(0) => translateX(0px)
-var reCSSCheckVal = /\(.*$$/;
-var pEl = document.createElement('p');
-var regOn = /^on/;
-var compatibleCSSMap = {
-    opacity: function (key, val) {
-        // @fuckie
-        /* istanbul ignore next */
-        return {
-            key: 'filter',
-            val: 'alpha(opacity=' + (val * 100) + ')'
-        };
-    }
-};
 
 
 /**
- * 大写单词中的第一个字母
- * @param {String} word
- * @returns {String}
- * @private
+ * noop
  */
-var upperCaseFirstLetter = function upperCaseFirstLetter(word) {
-    return word.slice(0, 1).toUpperCase() + word.slice(1);
+var noop = function () {
+    // ignore
+};
+
+var getSetDefaults = exports.getSetDefaults = {
+    /**
+     * get
+     * @type function
+     */
+    get: noop,
+
+    /**
+     * set
+     * @type function
+     */
+    set: noop,
+
+    /**
+     * set 参数的个数，即 key，val
+     * @type number
+     */
+    setLength: 2,
+
+    /**
+     * 是否遍历 set 参数
+     * @type boolean
+     */
+    eachSet: true,
+
+    /**
+     * 是否遍历 get 参数
+     * @type boolean
+     */
+    eachGet: true
 };
 
 
 /**
- * 获取兼容 api
- * @param {String} standard 标准属性、方法名称
- * @param {Object} parent   标准方法父级
- * @param isEventType {Boolean} 是否为事件
+ * 修正参数传参，参数最末尾的 undefined 参数都将被舍去
+ * @param args {Arguments} 参数
+ * @returns {Array}
+ */
+var getArgs = exports.args = function (args) {
+    args = array.from(args);
+    var argL = args.length;
+
+    while (argL >= 0 && typeis.Undefined(args[argL - 1])) {
+        argL -= 1;
+    }
+
+    return array.from(args).splice(0, argL);
+};
+
+
+/**
+ * 判断是否为集合类型
+ * @param obj
  * @returns {*}
  */
-var getCompatibleAPI = function (standard, parent, isEventType) {
-    var html5Key = null;
-    var find = false;
-    var evOn = 'on';
-
-    if (isEventType) {
-        standard = standard.replace(regOn, '').toLowerCase();
-    }
-
-    array.each(browserJSPrefixList, function (index, prefix) {
-        html5Key = isEventType ?
-            (prefix + standard ) :
-            (prefix ? prefix + upperCaseFirstLetter(standard) : standard);
-
-        if ((isEventType ? evOn : '') + html5Key in parent) {
-            find = true;
-            return false;
-        }
-    });
-
-    html5Key = find ? html5Key : undefined;
-
-    return html5Key;
+var isCollection = function (obj) {
+    return typeis.Object(obj) || typeis.Array(obj);
 };
 
 
 /**
- * 获取有浏览器前缀的方法名称
- * @param {String} standard 标准属性、方法名称
- * @param {Object} parent   标准方法父级
- * @returns {String} 兼容的属性、方法名称
+ * getset 转换器
+ * @param getSet {object} 获取与设置的 Map
+ * @param getSet.get {Function} get
+ * @param getSet.set {Function} set
+ * @param getSet.setLength {Number} 设置参数的个数
+ * @param getSet.eachSet {Boolean} 是否遍历 set 操作
+ * @param getSet.eachGet {Boolean} 是否遍历 get 操作
+ * @param args {Object|Array} 参数
+ * @returns {*}
  *
  * @example
- * compatible.js('audioContext', window);
- * // => "webkitAudioContext"
- */
-exports.js = function (standard, parent) {
-    return getCompatibleAPI(standard, parent, false);
-};
-
-
-/**
- * 获取有浏览器前缀的事件名称
- * @param {String} standard 标准事件名称
- * @param {Object} [parent=document]  标准事件父级
- * @returns {String} 兼容的事件名称
+ * var fn = function(key, val){
+     *     return argument.getset({
+     *         get: function(key){
+     *             return 'get ' + key;
+     *         },
+     *         set: function(key, val){
+     *             console.log('set ' + key + ' = ' + val);
+     *         }
+     *     }, arguments);
+     * };
  *
- * @example
- * compatible.event('transitionend', window);
- * // => "onwebkittransitionend"
- */
-exports.event = function (standard, parent) {
-    return getCompatibleAPI(standard, parent || document, true);
-};
-
-
-/**
- * 获取有浏览器前缀的CSS名称
- * @param {String} standardKey 标准的CSS3属性
- * @param {String} [standardVal] 标准的CSS3属性值
- * @returns {{key: String, val: String}} 兼容属性
+ * fn('a');
+ * // => "get a"
  *
- * @example
- * compatible.css('border-start');
- * // => {key: "-webkit-border-start"}
+ * fn(['a', 'b']);
+ * // => {a: "get a", b: "get b"}
+ *
+ * fn('a', 1);
+ * // => set a = 1
+ *
+ * fn({a: 1, b: 2});
+ * // => set a = 1
+ * // => set b = 2
  */
-exports.css = function (standardKey, standardVal) {
-    standardKey = string.separatorize(standardKey.trim().replace(reCSSPrefix, ''));
+exports.getSet = function (getSet, args) {
+    getSet = object.assign({}, getSetDefaults, getSet);
+    args = getArgs(args);
 
-    if (!reCSS3.test(standardKey)) {
-        return {
-            key: standardKey,
-            val: standardVal
-        };
+    var setLength = getSet.setLength;
+    var eachSet = getSet.eachSet;
+    var eachGet = getSet.eachGet;
+    var argl = args.length;
+    var arg0 = args[0];
+    var ret = {};
+
+    // .html();
+    if (argl === 0 && setLength === 1) {
+        return getSet.get();
     }
 
-    var findKey = '';
-    var findVal = '';
-    var checkVal = (standardVal + '').replace(reCSSCheckVal, '').toLowerCase();
-
-    array.each(browserCSSPrefixList, function (index, prefix) {
-        var testKey = prefix ? prefix + '-' + standardKey : standardKey;
-        var setKey = string.humprize(testKey);
-
-        if (setKey in pEl.style) {
-            findKey = testKey;
-
-            if (standardVal) {
-                array.each(browserCSSPrefixList, function (index, prefix) {
-                    var setVal = prefix ? prefix + '-' + standardVal : standardVal;
-
-                    try {
-                        // ie 下某些复制会报错
-                        pEl.style[setKey] = setVal;
-                    } catch (err) {
-                        // ignore
-                    }
-
-                    var cssText = pEl.style.cssText.toLowerCase();
-
-                    if (cssText.indexOf(checkVal) > -1) {
-                        findVal = setVal;
-                        return false;
-                    }
-                });
-
-                if (findVal) {
-                    return false;
-                }
-
-                findKey = '';
-            } else {
-                /* istanbul ignore next */
-                return false;
-            }
+    // .hasAttr('id');
+    // .hasAttr(['id', 'name']);
+    if (argl === 1 && setLength === 0) {
+        if (eachGet && isCollection(arg0)) {
+            collection.each(arg0, function (index, key) {
+                ret[key] = getSet.get(key);
+            });
+            return ret;
         }
-    });
 
-    var com = null;
-
-    /* istanbul ignore next */
-    if (!findKey && (com = compatibleCSSMap[standardKey])) {
-        if (standardVal) {
-            return com(standardKey, standardVal);
-        } else {
-            findKey = standardKey;
-        }
+        return getSet.get(arg0);
     }
 
-    return {key: findKey, val: findVal};
+    // .removeAttr(['id', 'name'])
+    if (argl === 1 && setLength === 1 && eachSet) {
+        if (typeis.Array(arg0)) {
+            return array.each(arg0, function (index, key) {
+                getSet.set(key);
+            });
+        }
+
+        return getSet.set(arg0);
+    }
+
+    // .html(html);
+    if (argl === 1 && setLength === 1 && !eachSet) {
+        return getSet.set(arg0);
+    }
+
+    // .css({width: 100});
+    // .css(['width', 'height']);
+    // .css('width');
+    if (argl === 1 && setLength === 2) {
+        if (typeis.Object(arg0) && eachSet) {
+            return object.each(arg0, function (key, val) {
+                getSet.set(key, val);
+            });
+        }
+
+        if (typeis.Array(arg0)) {
+            array.each(arg0, function (index, key) {
+                ret[key] = getSet.get(key);
+            });
+
+            return ret;
+        }
+
+        return getSet.get(arg0);
+    }
+
+    // .css('width', 100);
+    if (argl === 2 && setLength === 2) {
+        return getSet.set(arg0, args[1]);
+    }
 };

@@ -78,7 +78,7 @@ var isCollection = function (obj) {
  * @param getSet {object} 获取与设置的 Map
  * @param getSet.get {Function} get
  * @param getSet.set {Function} set
- * @param getSet.setLength {Number} 设置参数的个数
+ * @param getSet.setLength {Number} 设值时的参数个数
  * @param getSet.eachSet {Boolean} 是否遍历 set 操作
  * @param getSet.eachGet {Boolean} 是否遍历 get 操作
  * @param args {Object|Array} 参数
@@ -86,15 +86,15 @@ var isCollection = function (obj) {
  *
  * @example
  * var fn = function(key, val){
-     *     return argument.getset({
-     *         get: function(key){
-     *             return 'get ' + key;
-     *         },
-     *         set: function(key, val){
-     *             console.log('set ' + key + ' = ' + val);
-     *         }
-     *     }, arguments);
-     * };
+ *     return argument.getset({
+ *         get: function(key){
+ *             return 'get ' + key;
+ *         },
+ *         set: function(key, val){
+ *             console.log('set ' + key + ' = ' + val);
+ *         }
+ *     }, arguments);
+ * };
  *
  * fn('a');
  * // => "get a"
